@@ -154,12 +154,19 @@ def _trigger_username(execution) -> str:
 def _write_files(tmp_path: Path, script_version) -> None:
     """写入主代码(main.py)与文件集(支持子目录),防路径穿越。
 
-    文件集内可包含 .env 等非 .py 文件,脚本侧用 python-dotenv 自行加载。
+    文件集优先取版本快照;快照为空时回退到脚本当前 files(与 env_vars 一致,
+    便于在 admin 主记录填写后立即可执行)。文件集内可含 .env 等非 .py 文件,
+    脚本侧用 python-dotenv 自行加载。
     """
     main_file = tmp_path / "main.py"
     main_file.write_text(script_version.code or "", encoding="utf-8")
+    files = script_version.files or []
+    if not files:
+        script = getattr(script_version, "script", None)
+        if script is not None:
+            files = script.files or []
     root = tmp_path.resolve()
-    for item in script_version.files or []:
+    for item in files:
         if not isinstance(item, dict):
             continue
         rel_path = (item.get("path") or "").strip("/")

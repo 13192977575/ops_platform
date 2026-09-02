@@ -110,6 +110,31 @@ class ScriptFilesAndEnvTests(TransactionTestCase):
         self.assertIn("hello db-internal", messages)
         self.assertIn("port=5432", messages)
 
+    def test_fallback_to_script_files_when_version_empty(self):
+        from ops_platform.apps.executions.models import Execution
+        from ops_platform.apps.executions.tasks import execute_asset
+
+        script = self._make_env()
+        version = script.versions.get(version=1)
+        version.code = "from utils.config import greeting\nprint(greeting())\n"
+        version.files = []  # 版本快照为空 → 应回退脚本当前 files
+        version.save(update_fields=["code", "files"])
+        script.files = [
+            {"path": "utils/config.py", "content": "def greeting():\n    return 'hello fallback'\n"}
+        ]
+        script.save(update_fields=["files"])
+
+        execution = Execution.objects.create(
+            asset_type=Execution.AssetType.SCRIPT, asset_id=script.pk,
+            trigger_type=Execution.TriggerType.MANUAL, request_id="req-fallback",
+            business=script.business, environment=script.environment,
+        )
+        result = execute_asset(execution.pk)
+        execution.refresh_from_db()
+        self.assertEqual(result["status"], Execution.Status.SUCCESS)
+        messages = " ".join(execution.logs.values_list("message", flat=True))
+        self.assertIn("hello fallback", messages)
+
     def test_path_traversal_blocked(self):
         script = self._make_env()
         version = script.versions.get(version=1)
