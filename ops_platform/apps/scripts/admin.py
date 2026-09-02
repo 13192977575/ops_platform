@@ -29,6 +29,12 @@ class ScriptAdmin(admin.ModelAdmin):
     autocomplete_fields = ["business", "project", "owner"]
     inlines = [ScriptVersionInline]
 
+    def save_model(self, request, obj, form, change):
+        # admin 直接编辑 env_vars 时同样加密落库(与 API 路径一致,敏感键不存明文)
+        if "env_vars" in form.changed_data:
+            obj.set_env_vars(form.cleaned_data.get("env_vars") or {})
+        super().save_model(request, obj, form, change)
+
 
 @admin.register(ScriptVersion)
 class ScriptVersionAdmin(admin.ModelAdmin):
