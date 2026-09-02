@@ -43,7 +43,7 @@ services:
       - -c
       - "python manage.py collectstatic --noinput && gunicorn ops_platform.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 60"
     ports:
-      - "8000:8000"
+      - "${WEB_PORT:-8000}:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -57,7 +57,7 @@ services:
     env_file: .env.production
     environment:
       DJANGO_ENV: prod
-    command: celery -A ops_platform worker -l info --concurrency=4
+    command: celery -A ops_platform.celery worker -l info --concurrency=4
     depends_on:
       db:
         condition: service_healthy
@@ -71,7 +71,7 @@ services:
     env_file: .env.production
     environment:
       DJANGO_ENV: prod
-    command: celery -A ops_platform beat -l info
+    command: celery -A ops_platform.celery beat -l info
     depends_on:
       db:
         condition: service_healthy
