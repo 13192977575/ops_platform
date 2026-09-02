@@ -1,0 +1,3 @@
+-r requirements-base.txt
+# 开发环境数据库(SQLite)无需额外驱动;如需 PostgreSQL 本地联调取消下一行注释
+# psycopg[binary]==3.2.9

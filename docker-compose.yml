@@ -1,0 +1,84 @@
+# ops_platform 生产编排:PostgreSQL + Redis + migrate(一次性)+ Web + Worker + Beat
+# 用法:cp .env.production.example .env.production 并填写,然后 docker compose up -d
+services:
+  db:
+    image: postgres:16-alpine
+    # 统一从 .env.production 读取凭据(避免与 web/worker/beat 的 env_file 来源不一致)
+    env_file: .env.production
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ops} -d ${POSTGRES_DB:-ops_platform}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # 一次性迁移服务:建表完成后 web/worker/beat 才启动(消除 Beat/Worker 抢跑)
+  migrate:
+    build: .
+    env_file: .env.production
+    environment:
+      DJANGO_ENV: prod
+    command: python manage.py migrate --noinput
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  web:
+    build: .
+    env_file: .env.production
+    environment:
+      DJANGO_ENV: prod
+    command:
+      - /bin/sh
+      - -c
+      - "python manage.py collectstatic --noinput && gunicorn ops_platform.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 60"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    build: .
+    env_file: .env.production
+    environment:
+      DJANGO_ENV: prod
+    command: celery -A ops_platform worker -l info --concurrency=4
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  beat:
+    build: .
+    env_file: .env.production
+    environment:
+      DJANGO_ENV: prod
+    command: celery -A ops_platform beat -l info
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:

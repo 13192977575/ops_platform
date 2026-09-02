@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Django 本地数据与运行时文件(不进镜像)
+db.sqlite3
+staticfiles/
+media/
+logs/
+.env
+.env.production
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# 测试与覆盖率
+.pytest_cache/
+.coverage
+htmlcov/
