@@ -9,7 +9,8 @@ venv/
 db.sqlite3
 staticfiles/
 media/
-logs/
+# 仅项目根日志目录(注意:/logs/ 精确匹配根,避免误伤 apps/logs 应用)
+/logs/
 
 # 环境与密钥
 .env
