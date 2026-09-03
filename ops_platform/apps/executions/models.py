@@ -86,3 +86,26 @@ class Execution(BaseModel):
         if self.duration_ms is None:
             return "-"
         return f"{self.duration_ms / 1000:.2f}s"
+
+    @property
+    def asset_label(self) -> str | None:
+        """资产显示名:按类型解析脚本/定时任务/接口的 name(code),供列表与详情展示。"""
+        if self.asset_type == self.AssetType.SCRIPT:
+            from ops_platform.apps.scripts.models import Script
+
+            asset = Script.objects.filter(pk=self.asset_id).only("name", "code").first()
+        elif self.asset_type == self.AssetType.SCHEDULE:
+            from ops_platform.apps.schedules.models import ScheduleTask
+
+            asset = ScheduleTask.objects.filter(pk=self.asset_id).only("name", "code").first()
+        elif self.asset_type == self.AssetType.ENDPOINT:
+            from ops_platform.apps.endpoints.models import HttpEndpoint
+
+            asset = HttpEndpoint.objects.filter(pk=self.asset_id).only("name", "code").first()
+        else:
+            asset = None
+        if asset is None:
+            return None
+        name = getattr(asset, "name", "") or str(asset)
+        code = getattr(asset, "code", "") or ""
+        return f"{name}({code})" if code else name

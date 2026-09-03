@@ -43,14 +43,7 @@ class ExecutionListSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_asset_name(self, obj: Execution):
-        if obj.asset_type == Execution.AssetType.SCRIPT:
-            from ops_platform.apps.scripts.models import Script
-
-            script = (
-                Script.objects.filter(pk=obj.asset_id).only("name", "code").first()
-            )
-            return f"{script.name}({script.code})" if script else None
-        return None
+        return obj.asset_label
 
 
 class ExecutionDetailSerializer(ExecutionListSerializer):
