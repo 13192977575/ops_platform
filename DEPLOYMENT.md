@@ -89,6 +89,23 @@ docker compose build && docker compose up -d
 docker compose exec worker pip install pandas
 ```
 
+### SQL Server / ODBC
+
+平台镜像已内置 Microsoft ODBC Driver 18 与 `unixODBC`，并在
+`requirements-base.txt` 固定 `pyodbc`。因此脚本可直接 `import pyodbc`，无需在
+AlmaLinux 宿主机安装驱动。部署或升级后执行：
+
+```bash
+docker compose build --no-cache
+docker compose up -d --force-recreate
+docker compose exec worker python -c "import pyodbc; print(pyodbc.version); print(pyodbc.drivers())"
+```
+
+输出应包含 `ODBC Driver 18 for SQL Server`。SQL Server 地址、数据库、账号和密码应
+在脚本的 `env_vars` 中配置，避免写入脚本代码或 `.env.production`。若 SQL Server 位于
+Docker 宿主机，容器中的 `localhost` 指向容器自身；应使用宿主机局域网 IP，或显式配置
+Docker 的 `host-gateway` 映射。
+
 **隔离场景建议:**
 - 某个脚本需要**特殊版本或大量依赖**,不想污染主环境 → 用 **Docker 执行器**:`runner=docker:python:3.12-pandas`(镜像自带依赖,天然隔离)
 - 计划支持脚本级 `requirements` + 独立 venv(二期)

@@ -13,3 +13,5 @@ whitenoise==6.9.0
 django-simpleui==2026.1.13
 # 业务脚本依赖(PF Node 同步脚本 import psycopg2)
 psycopg2-binary==2.9.10
+# SQL Server ODBC access for platform scripts (requires msodbcsql18 in Docker image)
+pyodbc==5.3.0
